@@ -1,6 +1,6 @@
 # Nexus PMS — API Design
 
-**Status:** Draft for review
+**Status:** Approved
 **Phase:** 5 of 7 — Documentation-first sequence (PRD → HLD → LLD → Database Design → **API Design** → UI Design → Coding)
 **Input:** [`01-PRD.md`](./01-PRD.md) · [`02-HLD.md`](./02-HLD.md) · [`03-LLD.md`](./03-LLD.md) · [`04-database-design.md`](./04-database-design.md) (all Approved)
 **Owners:** Architecture / API
@@ -222,8 +222,6 @@ Restating HLD §6/§7's structural guarantee in API terms: every endpoint above 
 
 ## 13. Approval & Next Steps
 
-This API Design is **not final** until:
-1. §11's project-existence-leakage judgment call (`403` vs. `404` for non-members) is confirmed or corrected.
-2. This document is explicitly reviewed and approved.
+**This API Design is approved (2026-07-13).** §11's project-existence-leakage judgment call (`404` for non-members rather than `403`) is confirmed as specified.
 
-Upon approval, the next phase is **UI Design**: screen inventory, component structure, and interaction design for the Admin Console, Backlog, Board, Sprint, and Reports views (HLD §9), consuming exactly the endpoints and payload shapes defined here. No implementation code will be written before UI Design is reviewed and approved.
+The next phase is **UI Design**: screen inventory, component structure, and interaction design for the Admin Console, Backlog, Board, Sprint, and Reports views (HLD §9), consuming exactly the endpoints and payload shapes defined here. No implementation code will be written before UI Design is reviewed and approved.
