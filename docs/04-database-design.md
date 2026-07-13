@@ -1,6 +1,6 @@
 # Nexus PMS — Database Design
 
-**Status:** Draft for review
+**Status:** Approved
 **Phase:** 4 of 7 — Documentation-first sequence (PRD → HLD → LLD → **Database Design** → API Design → UI Design → Coding)
 **Input:** [`01-PRD.md`](./01-PRD.md) · [`02-HLD.md`](./02-HLD.md) · [`03-LLD.md`](./03-LLD.md) (all Approved)
 **Owners:** Architecture / Database
@@ -461,8 +461,6 @@ Directly tied to HLD §13 targets:
 
 ## 13. Approval & Next Steps
 
-This Database Design is **not final** until:
-1. The `role_permissions` design note in §10 (Admin-only `MANAGE_PROJECT_USERS`, excluding PM/Scrum Master) is confirmed or corrected by stakeholders — it resolves an ambiguity in the PRD's persona description rather than a directly-stated requirement.
-2. This document is explicitly reviewed and approved.
+**This Database Design is approved (2026-07-13).** The §10 design note (Admin-only `MANAGE_PROJECT_USERS`, excluding PM/Scrum Master) is confirmed as specified.
 
-Upon approval, the next phase is **API Design**: REST endpoint contracts, request/response payloads, pagination/filtering conventions, and the standardized error-body shape for the `DomainException` hierarchy defined in LLD §13 — one endpoint set per module, covering every operation named across the PRD's functional requirements. No implementation code will be written before API Design and the subsequent UI Design phase are reviewed in turn.
+The next phase is **API Design**: REST endpoint contracts, request/response payloads, pagination/filtering conventions, and the standardized error-body shape for the `DomainException` hierarchy defined in LLD §13 — one endpoint set per module, covering every operation named across the PRD's functional requirements. No implementation code will be written before API Design and the subsequent UI Design phase are reviewed in turn.
