@@ -1,6 +1,6 @@
 # Nexus PMS — Low-Level Design (LLD)
 
-**Status:** Draft for review
+**Status:** Approved
 **Phase:** 3 of 7 — Documentation-first sequence (PRD → HLD → **LLD** → Database Design → API Design → UI Design → Coding)
 **Input:** [`01-PRD.md`](./01-PRD.md) (Approved) · [`02-HLD.md`](./02-HLD.md) (Approved)
 **Owners:** Architecture / Engineering
@@ -254,4 +254,4 @@ No module throws raw/unchecked exceptions across its service boundary — every 
 
 ## 16. Approval & Next Steps
 
-This LLD is **not final** until explicitly reviewed and approved. Upon approval, the next phase is **Database Design**: concrete schema (tables, columns, types, constraints, indexes) for every entity named here — `User`, `ProjectMembership`, `Issue` (and its type hierarchy), `WorkflowDefinition`/`Transition`, `Sprint`, the `RolePermission` seed data, projection tables, the outbox/job tables — sized and indexed against the HLD §13 NFR targets and the Large-scale target (HLD §1). No implementation code will be written before Database Design and the subsequent API Design and UI Design phases are each reviewed in turn.
+**This LLD is approved (2026-07-13).** The next phase is **Database Design**: concrete schema (tables, columns, types, constraints, indexes) for every entity named here — `User`, `ProjectMembership`, `Issue` (and its type hierarchy), `WorkflowDefinition`/`Transition`, `Sprint`, the `RolePermission` seed data, projection tables, the outbox/job tables — sized and indexed against the HLD §13 NFR targets and the Large-scale target (HLD §1). No implementation code will be written before Database Design and the subsequent API Design and UI Design phases are each reviewed in turn.
