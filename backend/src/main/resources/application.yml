@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: nexus-pms-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nexuspms}
+    username: ${DB_USERNAME:nexuspms}
+    password: ${DB_PASSWORD:nexuspms}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # schema is owned by Flyway migrations (Database Design phase), never by Hibernate auto-DDL
+    open-in-view: false
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api/v1   # matches API Design S2.1 base path
+
+nexus:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-in-every-real-deployment-please}
+    access-token-ttl-minutes: 15
+    refresh-token-ttl-days: 14
+  bootstrap:
+    # Set only for first deploy to provision the initial platform Admin (see
+    # BootstrapAdminRunner) -- an operational action, not a runtime signup path.
+    # No-ops once any user with this email exists.
+    admin-email: ${NEXUS_BOOTSTRAP_ADMIN_EMAIL:}
+    admin-name: ${NEXUS_BOOTSTRAP_ADMIN_NAME:Nexus Admin}
+    admin-password: ${NEXUS_BOOTSTRAP_ADMIN_PASSWORD:}
