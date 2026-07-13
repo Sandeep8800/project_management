@@ -1,6 +1,6 @@
 # Nexus PMS — UI Design
 
-**Status:** Draft for review
+**Status:** Approved
 **Phase:** 6 of 7 — Documentation-first sequence (PRD → HLD → LLD → Database Design → API Design → **UI Design** → Coding)
 **Input:** [`01-PRD.md`](./01-PRD.md) · [`02-HLD.md`](./02-HLD.md) · [`05-api-design.md`](./05-api-design.md) (all Approved)
 **Owners:** Architecture / Frontend
@@ -182,8 +182,6 @@ Carried forward from HLD §13 as binding requirements for this phase, not aspira
 
 ## 11. Approval & Next Steps
 
-This UI Design is **not final** until:
-1. The `GET /me/projects` endpoint gap (§3) is confirmed and folded back into API Design.
-2. This document is explicitly reviewed and approved.
+**This UI Design is approved (2026-07-13).** The `GET /me/projects` (and `GET /me`) endpoint gap from §3 has been folded back into [`05-api-design.md`](./05-api-design.md) §4.
 
-Upon approval, the next and final phase is **Coding** — implementation of the Spring Boot backend (per HLD/LLD/Database Design/API Design) and the React + TypeScript frontend (per this document), against the fully-approved documentation chain. No code has been written prior to this point in the process.
+The next and final phase is **Coding** — implementation of the Spring Boot backend (per HLD/LLD/Database Design/API Design) and the React + TypeScript frontend (per this document), against the fully-approved documentation chain. No code has been written prior to this point in the process.

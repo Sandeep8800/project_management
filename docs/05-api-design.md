@@ -96,6 +96,8 @@ Every non-2xx response uses one shape, mapping the LLD §13 `DomainException` hi
 | GET/POST | `/auth/sso/{provider}/callback` | none | IdP callback; on success runs `SsoLinkingService` auto-link-by-email and returns tokens, or `403 SSO_NO_MATCHING_ACCOUNT` if no admin-provisioned account matches (never creates one). |
 | POST | `/auth/refresh` | none (valid refresh token) | Body: `{ "refreshToken" }` → rotated `{ "accessToken", "refreshToken" }`. |
 | POST | `/auth/logout` | authenticated | Revokes the current refresh token. |
+| GET | `/me` | authenticated | Caller's own profile (name, email, department, default role, status). |
+| GET | `/me/projects` | authenticated | Caller's own `project_memberships`, each with `{ projectId, projectKey, projectName, role }` — self-scoped list, distinct from the admin-wide `GET /admin/projects`. Backs the UI Design §3 project switcher; added here per the gap UI Design surfaced (2026-07-13). No project-level permission required beyond authentication, since a user's own membership list cannot leak anything they don't already have access to. |
 
 ## 5. Admin Endpoints (Identity & Access + Governance & RBAC)
 
