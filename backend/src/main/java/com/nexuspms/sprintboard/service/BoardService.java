@@ -64,7 +64,7 @@ public class BoardService {
         }
     }
 
-    public record BoardColumnView(UUID columnId, String name, int displayOrder, Integer wipLimit, List<Issue> issues) {
+    public record BoardColumnView(UUID columnId, String name, int displayOrder, Integer wipLimit, List<String> statusNames, List<Issue> issues) {
     }
 
     public Board getBoard(UUID projectId, BoardType boardType) {
@@ -99,7 +99,7 @@ public class BoardService {
                     })
                     .collect(Collectors.toList());
 
-            return new BoardColumnView(column.getId(), column.getName(), column.getDisplayOrder(), column.getWipLimit(), issues);
+            return new BoardColumnView(column.getId(), column.getName(), column.getDisplayOrder(), column.getWipLimit(), statusNames, issues);
         }).toList();
     }
 

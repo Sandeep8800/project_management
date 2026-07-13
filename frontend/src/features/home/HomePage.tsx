@@ -1,11 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { fetchMyProjects } from "../auth/authApi";
 
 // UI Design S3 project switcher, backed by GET /me/projects (API Design S4, the
-// gap folded back in after UI Design surfaced it). Project detail screens
-// (Backlog/Board/Sprints/Reports) are follow-up work -- their backend modules
-// are stubbed in this pass, so this list is a landing point, not yet a link
-// into working project screens.
+// gap folded back in after UI Design surfaced it).
 export function HomePage() {
   const { data: projects, isLoading } = useQuery({
     queryKey: ["me", "projects"],
@@ -24,7 +22,9 @@ export function HomePage() {
       <ul className="project-list">
         {projects.map((p) => (
           <li key={p.projectId}>
-            <strong>{p.projectKey}</strong> — {p.projectName}
+            <Link to={`/projects/${p.projectId}/backlog`}>
+              <strong>{p.projectKey}</strong> — {p.projectName}
+            </Link>
             <span className="role-badge">{p.role}</span>
           </li>
         ))}

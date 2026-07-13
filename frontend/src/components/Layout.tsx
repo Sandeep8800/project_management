@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { PermissionGate } from "./PermissionGate";
+import { NotificationBell } from "./NotificationBell";
 
 // UI Design S3: top-level nav shell -- Admin Console only renders if the caller
 // is platform Admin; Backlog/Board/Sprints/Reports are follow-up work (their
@@ -19,6 +20,8 @@ export function Layout() {
           </PermissionGate>
         </nav>
         <div className="app-account">
+          <NotificationBell />
+          <NavLink to="/notifications">Inbox</NavLink>
           <span>{user?.name}</span>
           <button onClick={() => logout()}>Sign out</button>
         </div>

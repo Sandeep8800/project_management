@@ -9,6 +9,12 @@ import { DashboardPage } from "./features/admin/DashboardPage";
 import { UsersPage } from "./features/admin/UsersPage";
 import { ProjectsPage } from "./features/admin/ProjectsPage";
 import { AuditLogPage } from "./features/admin/AuditLogPage";
+import { ProjectLayout } from "./features/project/ProjectLayout";
+import { BacklogPage } from "./features/backlog/BacklogPage";
+import { BoardPage } from "./features/sprintboard/BoardPage";
+import { SprintsPage } from "./features/sprintboard/SprintsPage";
+import { ReportsPage } from "./features/reporting/ReportsPage";
+import { NotificationsPage } from "./features/notifications/NotificationsPage";
 
 export default function App() {
   return (
@@ -22,6 +28,16 @@ export default function App() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+
+        <Route path="projects/:projectId" element={<ProjectLayout />}>
+          <Route index element={<Navigate to="backlog" replace />} />
+          <Route path="backlog" element={<BacklogPage />} />
+          <Route path="board" element={<BoardPage />} />
+          <Route path="sprints" element={<SprintsPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+        </Route>
+
         <Route
           path="admin"
           element={
