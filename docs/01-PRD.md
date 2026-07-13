@@ -1,11 +1,11 @@
 # Nexus PMS — Product Requirements Document (PRD)
 
-**Status:** Draft for review
+**Status:** Approved
 **Phase:** 1 of 7 — Documentation-first sequence (PRD → HLD → LLD → Database Design → API Design → UI Design → Coding)
 **Owners:** Product / Architecture
 **Last updated:** 2026-07-13
 
-> This document must be reviewed and its open questions resolved before High-Level Design (HLD) begins. No implementation code is written against this phase.
+> This document has been reviewed and its blocking open questions resolved (§5). Nexus PMS is cleared to proceed to High-Level Design (HLD). No implementation code is written against this phase.
 
 ---
 
@@ -57,7 +57,7 @@ Roles are **project-scoped** (§3.1.3): the same person may hold different roles
 - FR-1: Admin can create user accounts with: name, email, employee ID, department, default role. No public/self-service registration path exists anywhere in the system.
 - FR-2: Admin can deactivate a user account (revokes access, preserves historical attribution on issues/comments/audit records).
 - FR-3: Admin can reactivate a previously deactivated account.
-- FR-4: Admin can trigger password resets for local-credential accounts, or trigger SSO-linked account provisioning for federated accounts.
+- FR-4: Admin can trigger password resets for local-credential accounts, or trigger SSO-linked account provisioning for federated accounts. **Resolved linkage model:** on a user's first successful SSO login, the system auto-links the SSO identity to the matching admin-created account by exact IdP-asserted email match. This linkage step never creates a new account — if no admin-provisioned account exists with that email, SSO login is rejected, preserving the no-self-service guarantee.
 - FR-5: Deactivated users are removed from active assignment pools (cannot be newly assigned issues) but remain visible in historical records (audit log, past comments, resolved issues) for traceability.
 
 #### 3.1.2 Project Management
@@ -86,14 +86,14 @@ Roles are **project-scoped** (§3.1.3): the same person may hold different roles
 ### 3.3 Sprint Lifecycle (Scrum-enabled projects)
 - FR-21: Create a sprint (name, start date, end date, goal).
 - FR-22: Sprint planning: add/remove backlog issues to/from a sprint before it starts (drag-and-drop or equivalent).
-- FR-23: Start a sprint (locks sprint dates, transitions sprint to Active; only one active sprint per board unless the org explicitly enables parallel sprints — flagged as an open design question for HLD).
+- FR-23: Start a sprint (locks sprint dates, transitions sprint to Active). **v1 scope: exactly one active sprint per project at a time** (standard Scrum semantics). Parallel/concurrent active sprints on one backlog (scaled-team, Jira-Premium-style) is documented as a **post-v1 enhancement** — the sprint data model should leave room for an admin-level toggle later without a breaking redesign, but v1 does not build it.
 - FR-24: Active Sprint board reflects real-time status of all issues in the sprint.
 - FR-25: Complete a sprint: incomplete issues are handled via explicit rollover decision at completion time — return to backlog or move to the next sprint (PM/Scrum Master choice at completion, not silent default).
 
 ### 3.4 Boards
 - FR-26: Kanban board: continuous-flow board, not sprint-scoped, with configurable per-column WIP limits.
 - FR-27: Scrum board: sprint-scoped board reflecting the active sprint's issues.
-- FR-28: Board availability is determined by project methodology type (Scrum / Kanban / Hybrid), set at project creation (FR-6). **Whether Hybrid means "both board types view the same backlog" vs. "mutually exclusive per-issue tracks" is an open question — see §5.**
+- FR-28: **Resolved:** every project has exactly **one backlog**. Board availability (Scrum, Kanban, or both) is determined by project methodology type set at project creation (FR-6), but Scrum and Kanban boards are two *views* over the same backlog and issue set, not separate data tracks. A "Hybrid" project simply exposes both board views over that one backlog — an issue moved on one board is the same issue reflected on the other, not a copy.
 - FR-29: Board columns map to a status workflow that is configurable per project (see FR-30).
 
 ### 3.5 Issue Details
@@ -120,29 +120,29 @@ Roles are **project-scoped** (§3.1.3): the same person may hold different roles
 | Area | Requirement | Status |
 |---|---|---|
 | **Tenancy** | Single-tenant architecture. One deployment serves one organization. No `tenant_id` partitioning or cross-tenant isolation logic required in schema or query layer. | **Resolved** |
-| **Authentication** | Auth module supports SAML, OAuth2, and OIDC for enterprise IdPs (Okta, Azure AD, Google Workspace), alongside or instead of local credential login. SSO governs *authentication* only — account *existence* is always admin-provisioned (no just-in-time account creation via SSO first login, unless explicitly reconsidered at HLD). | **Resolved** |
+| **Authentication** | Auth module supports SAML, OAuth2, and OIDC for enterprise IdPs (Okta, Azure AD, Google Workspace), alongside or instead of local credential login. SSO governs *authentication* only — account *existence* is always admin-provisioned. First SSO login auto-links to the matching admin-provisioned account by exact email match (FR-4); it never creates an account. | **Resolved** |
 | **Authorization (RBAC)** | Enforced at the API layer. Every API endpoint validates the caller's project-scoped role server-side before executing an action. UI-level hiding of controls is a convenience only, never the authorization boundary. | **Resolved** |
 | **Auditability** | All admin governance actions (§3.1.4) are logged durably and are queryable. | Resolved (requirement level); retention period TBD at HLD. |
-| **Scale** | Concurrent users, number of projects, issues per project. Needed to size DB indexing, caching, and connection pooling strategy. | **Open — blocks HLD sizing decisions, see §5.** |
-| **Availability/DR** | Not yet specified (target uptime, backup/restore RPO/RTO). | Open — to be scoped at HLD given this is single-tenant self-hosted. |
+| **Scale** | **Large deployment target:** 300+ concurrent users, 100+ projects, 10k+ issues per project. Drives HLD toward read replicas, an aggressive caching layer (e.g. Redis) for boards/backlogs/reports, careful DB connection pooling, and indexing strategy built for high-cardinality issue tables from day one (not retrofitted later). | **Resolved** |
+| **Availability/DR** | Not yet specified (target uptime, backup/restore RPO/RTO). | Open — to be scoped at HLD given this is single-tenant self-hosted, informed by the Large-scale target above. |
 | **Data retention** | Archived/deleted project retention window, audit log retention period. | Open — to be scoped at HLD. |
 
 ---
 
-## 5. Open Questions Requiring Stakeholder Decision Before HLD
+## 5. Open Questions — Resolution Status
 
-These must be resolved (or explicitly deferred with a documented default) before HLD design begins:
+All questions that blocked HLD have been resolved by stakeholder decision:
 
-1. **Expected scale** — concurrent users, number of projects, and issues per project. Required to size database indexing strategy, caching layer, and connection pooling. *No default assumed; blocking.*
-2. **Kanban/Scrum coexistence** — for a project marked "Hybrid" (or generally), do Kanban and Scrum boards operate as two views over the *same* backlog and issue set, or are they mutually exclusive project-type tracks that don't share a backlog? This determines board/data-model design (FR-28) and sprint semantics (FR-23).
-3. Related sub-question: can a project run **multiple concurrent active sprints** on one board, or is it strictly one active sprint per project/board at a time (FR-23 default assumption)?
-4. Notification delivery channels — in-app, email, or both (FR-40) — non-blocking for PRD sign-off but should be confirmed early in HLD.
-5. SSO account linkage — does first SSO login for a pre-provisioned (by-email) admin-created account auto-link, or does an admin need to explicitly bind the SSO identity to the local account record? (Governs the "no self-service" guarantee at the account-linkage boundary.)
-
-Resolved and no longer open:
 - ~~Multi-tenant vs single-tenant~~ — **Resolved: single-tenant.**
 - ~~SSO priority~~ — **Resolved: SAML/OAuth2/OIDC supported.**
 - ~~RBAC enforcement layer~~ — **Resolved: enforced at the API layer.**
+- ~~Expected scale~~ — **Resolved: Large** (300+ concurrent users, 100+ projects, 10k+ issues/project). See §4.
+- ~~Kanban/Scrum coexistence~~ — **Resolved: shared backlog, dual view.** One backlog per project; Scrum and Kanban boards are two views over the same issue set (FR-28).
+- ~~Concurrent active sprints~~ — **Resolved: one active sprint per project in v1.** Parallel sprints deferred to a post-v1 enhancement, data model to leave room for it (FR-23).
+- ~~SSO account linkage~~ — **Resolved: auto-link by exact email match on first SSO login,** never creating a new account (FR-4).
+
+One item remains explicitly non-blocking and deferred to early HLD:
+- Notification delivery channels — in-app, email, or both (FR-40).
 
 ---
 
@@ -161,8 +161,13 @@ Resolved and no longer open:
 
 ## 7. Approval & Next Steps
 
-This PRD is **not final** until:
-1. Open questions in §5 are resolved by stakeholders (at minimum, expected scale and Kanban/Scrum coexistence, as these directly shape data model and board architecture).
-2. This document is explicitly reviewed and approved.
+**This PRD is approved.** All blocking open questions from §5 have been resolved by stakeholder decision (2026-07-13):
 
-Upon approval, the next phase is **High-Level Design (HLD)**: system architecture, service boundaries, technology choices within the Spring Boot / React + TypeScript stack, and how the resolved NFRs (single-tenant, SSO, API-layer RBAC) map onto concrete architecture components. No implementation code will be written before HLD and subsequent LLD, Database Design, API Design, and UI Design phases are each reviewed in turn.
+| Decision | Resolution |
+|---|---|
+| Scale target | Large: 300+ concurrent users, 100+ projects, 10k+ issues/project |
+| Board/backlog model | Shared backlog per project; Scrum and Kanban are dual views over the same issues |
+| Sprint concurrency | One active sprint per project in v1; parallel sprints deferred post-v1 |
+| SSO account linkage | Auto-link by exact email match on first SSO login; never auto-creates an account |
+
+The next phase is **High-Level Design (HLD)**: system architecture, service boundaries, technology choices within the Spring Boot / React + TypeScript stack, and how the resolved NFRs and decisions above (single-tenant, SSO, API-layer RBAC, Large-scale sizing, shared-backlog board model, single-active-sprint v1 scope) map onto concrete architecture components — including where read replicas, caching, and connection pooling are introduced to meet the Large-scale target. No implementation code will be written before HLD and subsequent LLD, Database Design, API Design, and UI Design phases are each reviewed in turn.
