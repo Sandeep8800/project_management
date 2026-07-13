@@ -39,6 +39,10 @@ public class User {
     @Column(name = "platform_admin", nullable = false)
     private boolean platformAdmin = false;
 
+    /** HLD S8.1: in-app notifications are always on; this is the email opt-in toggle (V9 migration note). */
+    @Column(name = "email_notifications_enabled", nullable = false)
+    private boolean emailNotificationsEnabled = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -91,6 +95,14 @@ public class User {
 
     public void revokePlatformAdmin() {
         this.platformAdmin = false;
+    }
+
+    public boolean isEmailNotificationsEnabled() {
+        return emailNotificationsEnabled;
+    }
+
+    public void setEmailNotificationsEnabled(boolean enabled) {
+        this.emailNotificationsEnabled = enabled;
     }
 
     public UUID getId() {

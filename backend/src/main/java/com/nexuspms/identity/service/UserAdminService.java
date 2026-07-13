@@ -115,4 +115,10 @@ public class UserAdminService {
         user.revokePlatformAdmin();
         eventPublisher.publish(new PlatformAdminRevokedEvent(actorId, userId));
     }
+
+    /** Self-service by design (HLD S8.1) -- unlike everything else in this service, callers act on their own userId, not an admin-selected target. */
+    @Transactional
+    public void setEmailNotificationsEnabled(UUID userId, boolean enabled) {
+        get(userId).setEmailNotificationsEnabled(enabled);
+    }
 }

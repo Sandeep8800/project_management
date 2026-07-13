@@ -46,6 +46,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        // WS handshake is unauthenticated at the HTTP layer; the STOMP CONNECT
+                        // frame carries the JWT and is checked by StompAuthChannelInterceptor
+                        // (HLD S8.4, API Design S10) -- this is not a bypass of auth, just a
+                        // different point in the protocol where it's enforced.
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)

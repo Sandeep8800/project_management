@@ -36,7 +36,7 @@ public class AuthorizationAspect {
     }
 
     @Around("@annotation(requirePermission)")
-    public Object enforce(ProceedingJoinPoint joinPoint, RequirePermission requirePermission) throws Throwable {
+    public Object enforcePermission(ProceedingJoinPoint joinPoint, RequirePermission requirePermission) throws Throwable {
         UUID projectId = resolveProjectId(joinPoint, requirePermission.projectIdParam());
         UUID userId = currentUser.requireUserId();
 
@@ -46,6 +46,17 @@ public class AuthorizationAspect {
         if (!permissionResolver.hasPermission(userId, projectId, requirePermission.value())) {
             throw new AuthorizationDeniedException(
                     "You do not have the '" + requirePermission.value() + "' permission on this project.");
+        }
+        return joinPoint.proceed();
+    }
+
+    @Around("@annotation(requireMembership)")
+    public Object enforceMembership(ProceedingJoinPoint joinPoint, RequireMembership requireMembership) throws Throwable {
+        UUID projectId = resolveProjectId(joinPoint, requireMembership.projectIdParam());
+        UUID userId = currentUser.requireUserId();
+
+        if (!permissionResolver.hasMembership(userId, projectId)) {
+            throw new ResourceNotFoundException("Project " + projectId + " not found.");
         }
         return joinPoint.proceed();
     }
@@ -63,7 +74,7 @@ public class AuthorizationAspect {
             }
         }
         throw new IllegalStateException(
-                "RequirePermission on " + method.getName() + " could not resolve @PathVariable '" + paramName + "'");
+                "Authorization annotation on " + method.getName() + " could not resolve @PathVariable '" + paramName + "'");
     }
 
     private String pathVariableName(Parameter parameter) {
