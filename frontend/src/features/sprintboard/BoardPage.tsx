@@ -1,19 +1,17 @@
 import { useState, type DragEvent } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getBoard, type BoardColumn } from "./sprintBoardApi";
+import { getBoard, listWorkflowStatuses, listWorkflowTransitions, type BoardColumn } from "./sprintBoardApi";
 import { transitionIssue, type Issue } from "../backlog/backlogApi";
 import { ApiError } from "../../lib/apiClient";
 import { IssueDetailPanel } from "../../components/IssueDetailPanel";
 
 /**
  * UI Design S4.4: Scrum/Kanban board with native HTML5 drag-and-drop between
- * columns. A drop triggers the same transitions endpoint the status dropdown
- * uses; illegal drops still get the server's 422 (WorkflowTransitionValidator)
- * as the real authority -- this client doesn't pre-validate the drop target
- * against the workflow graph the way IssueDetailPanel's dropdown does, so a
- * rejected drop surfaces as an error banner rather than being blocked before
- * the request, a known simplification versus UI Design S4.4's full spec.
+ * columns. Illegal drops are blocked client-side using the already-fetched
+ * workflow graph (same computation as IssueDetailPanel's status dropdown) --
+ * the server's 422 (WorkflowTransitionValidator) remains the actual authority
+ * if this client's cached graph is stale, per UI Design Principle 1.
  */
 export function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -21,12 +19,15 @@ export function BoardPage() {
   const [boardType, setBoardType] = useState<"SCRUM" | "KANBAN">("KANBAN");
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draggedIssue, setDraggedIssue] = useState<Issue | null>(null);
 
   const { data: columns, isLoading } = useQuery({
     queryKey: ["board", projectId, boardType],
     queryFn: () => getBoard(projectId!, boardType),
     enabled: Boolean(projectId),
   });
+  const { data: statuses } = useQuery({ queryKey: ["workflow", "statuses", projectId], queryFn: () => listWorkflowStatuses(projectId!), enabled: Boolean(projectId) });
+  const { data: transitions } = useQuery({ queryKey: ["workflow", "transitions", projectId], queryFn: () => listWorkflowTransitions(projectId!), enabled: Boolean(projectId) });
 
   const transitionMutation = useMutation({
     mutationFn: ({ issue, targetStatus }: { issue: Issue; targetStatus: string }) =>
@@ -35,13 +36,41 @@ export function BoardPage() {
     onError: (err) => setError(err instanceof ApiError ? err.message : "Could not move the issue."),
   });
 
+  function legalTargetStatuses(fromStatus: string): Set<string> {
+    if (!statuses || !transitions) return new Set();
+    const fromStatusId = statuses.find((s) => s.name === fromStatus)?.id;
+    if (!fromStatusId) return new Set();
+    return new Set(
+      transitions
+        .filter((t) => t.fromStatusId === fromStatusId)
+        .map((t) => statuses.find((s) => s.id === t.toStatusId)?.name)
+        .filter((n): n is string => Boolean(n))
+    );
+  }
+
+  function isLegalDropColumn(column: BoardColumn): boolean {
+    if (!draggedIssue) return false;
+    const legal = legalTargetStatuses(draggedIssue.status);
+    return column.statusNames.some((s) => legal.has(s));
+  }
+
   function handleDrop(e: DragEvent, column: BoardColumn) {
     e.preventDefault();
     setError(null);
     const issueId = e.dataTransfer.getData("text/issue-id");
     const issue = columns?.flatMap((c) => c.issues).find((i) => i.id === issueId);
-    const targetStatus = column.statusNames[0];
-    if (issue && targetStatus && issue.status !== targetStatus) {
+    setDraggedIssue(null);
+    if (!issue) return;
+
+    const legal = legalTargetStatuses(issue.status);
+    const targetStatus = column.statusNames.find((s) => legal.has(s));
+    if (!targetStatus) {
+      if (!column.statusNames.includes(issue.status)) {
+        setError(`Cannot move ${issue.issueKey} from "${issue.status}" to "${column.name}" -- that transition isn't allowed by this project's workflow.`);
+      }
+      return;
+    }
+    if (issue.status !== targetStatus) {
       transitionMutation.mutate({ issue, targetStatus });
     }
   }
@@ -67,30 +96,46 @@ export function BoardPage() {
         <p>No active sprint, or the active sprint has no issues yet.</p>
       ) : (
         <div className="board-columns">
-          {columns?.map((column) => (
-            <div key={column.columnId} className="board-column" onDragOver={(e) => e.preventDefault()} onDrop={(e) => handleDrop(e, column)}>
-              <div className="board-column-header">
-                {column.name}
-                {column.wipLimit != null && (
-                  <span className={column.issues.length >= column.wipLimit ? "wip-limit-warning" : "wip-limit"}>
-                    {column.issues.length} / {column.wipLimit}
-                  </span>
-                )}
-              </div>
-              {column.issues.map((issue) => (
-                <div
-                  key={issue.id}
-                  className="issue-card"
-                  draggable
-                  onDragStart={(e) => e.dataTransfer.setData("text/issue-id", issue.id)}
-                  onClick={() => setSelectedIssueId(issue.id)}
-                >
-                  <div className="issue-card-key">{issue.issueKey}</div>
-                  <div>{issue.title}</div>
+          {columns?.map((column) => {
+            const isDropTarget = draggedIssue != null;
+            const isLegal = isDropTarget && isLegalDropColumn(column);
+            return (
+              <div
+                key={column.columnId}
+                className={
+                  "board-column" +
+                  (isDropTarget ? (isLegal ? " drop-target-legal" : " drop-target-illegal") : "")
+                }
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, column)}
+              >
+                <div className="board-column-header">
+                  {column.name}
+                  {column.wipLimit != null && (
+                    <span className={column.issues.length >= column.wipLimit ? "wip-limit-warning" : "wip-limit"}>
+                      {column.issues.length} / {column.wipLimit}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
-          ))}
+                {column.issues.map((issue) => (
+                  <div
+                    key={issue.id}
+                    className="issue-card"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/issue-id", issue.id);
+                      setDraggedIssue(issue);
+                    }}
+                    onDragEnd={() => setDraggedIssue(null)}
+                    onClick={() => setSelectedIssueId(issue.id)}
+                  >
+                    <div className="issue-card-key">{issue.issueKey}</div>
+                    <div>{issue.title}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </div>
       )}
 

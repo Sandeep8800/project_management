@@ -1,28 +1,27 @@
 package com.nexuspms.notifications.service;
 
 import com.nexuspms.common.job.JobHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * LLD S10 job catalog completeness: REMINDER is defined (PRD FR-39 sprint
- * start/end reminders) but nothing currently enqueues one -- immediate
- * sprint-start/sprint-complete notifications are handled directly by
- * NotificationDispatchService's event listeners. A true "reminder N days
- * before sprint end" feature needs a scheduler that computes and enqueues
- * these ahead of time, which isn't built in this pass. This handler is a
- * placeholder so the job type has a registered handler (BackgroundJobWorker
- * logs a warning and no-ops for any job type without one) rather than silently
- * failing once that scheduler is added.
+ * LLD S10: handles REMINDER jobs enqueued by SprintReminderScheduler (Sprint &
+ * Board module, sprint-ending-soon reminders per PRD FR-39). Notifications owns
+ * the handler since dispatch is its concern; Sprint & Board only decides *when*
+ * a reminder is due, not how it's delivered.
  */
 @Component
 public class ReminderJobHandler implements JobHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(ReminderJobHandler.class);
     public static final String JOB_TYPE = "REMINDER";
+
+    private final NotificationDispatchService notificationDispatchService;
+
+    public ReminderJobHandler(NotificationDispatchService notificationDispatchService) {
+        this.notificationDispatchService = notificationDispatchService;
+    }
 
     @Override
     public String jobType() {
@@ -31,6 +30,8 @@ public class ReminderJobHandler implements JobHandler {
 
     @Override
     public void handle(Map<String, Object> payload) {
-        log.info("[STUB REMINDER] payload {} -- no scheduler enqueues this job type yet", payload);
+        UUID projectId = UUID.fromString((String) payload.get("projectId"));
+        String reminderType = (String) payload.get("reminderType");
+        notificationDispatchService.notifyAllProjectMembers(projectId, reminderType, payload);
     }
 }

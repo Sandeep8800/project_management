@@ -12,6 +12,17 @@ spring:
   flyway:
     locations: classpath:db/migration
     baseline-on-migrate: true
+  mail:
+    host: ${NEXUS_SMTP_HOST:}
+    port: ${NEXUS_SMTP_PORT:587}
+    username: ${NEXUS_SMTP_USERNAME:}
+    password: ${NEXUS_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: ${SERVER_PORT:8080}
@@ -30,3 +41,15 @@ nexus:
     admin-email: ${NEXUS_BOOTSTRAP_ADMIN_EMAIL:}
     admin-name: ${NEXUS_BOOTSTRAP_ADMIN_NAME:Nexus Admin}
     admin-password: ${NEXUS_BOOTSTRAP_ADMIN_PASSWORD:}
+  storage:
+    # HLD S5/S10: local-disk stand-in for the S3-compatible object storage the
+    # design docs specify -- swap for a real provider by replacing
+    # LocalObjectStorageController + AttachmentService.generateUploadUrl only.
+    local-path: ${NEXUS_STORAGE_PATH:./data/attachments}
+    base-url: ${NEXUS_STORAGE_BASE_URL:http://localhost:8080/api/v1}
+  mail:
+    # HLD S3: SMTP is an external system. Leave disabled to keep
+    # EmailDeliveryChannel in log-only stub mode (no SMTP server assumed
+    # present in this environment).
+    enabled: ${NEXUS_MAIL_ENABLED:false}
+    from: ${NEXUS_MAIL_FROM:no-reply@nexus-pms.local}

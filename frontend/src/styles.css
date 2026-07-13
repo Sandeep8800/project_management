@@ -306,6 +306,17 @@ body {
   font-weight: 700;
 }
 
+.drop-target-legal {
+  outline: 2px dashed #4a8;
+  outline-offset: 2px;
+}
+
+.drop-target-illegal {
+  outline: 2px dashed #8886;
+  outline-offset: 2px;
+  opacity: 0.6;
+}
+
 .issue-card {
   border: 1px solid #8884;
   border-radius: 6px;

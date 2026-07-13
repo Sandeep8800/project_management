@@ -23,18 +23,21 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
  * LLD S7: reacts to issue/sprint domain events and maintains the projection
  * tables Reporting serves reads from.
  *
- * Known simplification vs. the HLD S5/S8.2 "incremental, delta-based
- * projection" design intent: this recomputes the full remaining-points/CFD
- * count on every relevant event rather than applying a true incremental delta.
- * Correct, and cheap enough at this pass's scale, but not the O(1)-per-event
- * update the HLD envisioned for the Large-scale target -- flagged as a
- * follow-up optimization, not built here.
+ * CFD updates are a true incremental delta (decrement the from-status count,
+ * increment the to-status count) rather than a full per-project rescan -- the
+ * O(1)-per-event update the HLD S5/S8.2 design intent called for. A brand-new
+ * "today" row is seeded from the most recent prior day's count (carry-forward)
+ * rather than starting at zero, since a CFD snapshot represents cumulative
+ * state, not a same-day-only count. Burndown remains a targeted per-sprint
+ * recompute (bounded by sprint size, not project size, so it was never the
+ * expensive path this optimization targets).
  */
 @Service
 public class ProjectionUpdateService {
@@ -64,13 +67,15 @@ public class ProjectionUpdateService {
         if (event.sprintId() != null) {
             updateBurndown(event.sprintId());
         }
-        updateCfd(event.projectId());
+        adjustCfd(event.projectId(), event.fromStatus(), -1);
+        adjustCfd(event.projectId(), event.toStatus(), 1);
     }
 
     @EventListener
     @Transactional
     public void onIssueCreated(IssueCreatedEvent event) {
-        updateCfd(event.projectId());
+        String initialStatus = issueService.get(event.issueId()).getStatus();
+        adjustCfd(event.projectId(), initialStatus, 1);
     }
 
     @EventListener
@@ -79,15 +84,15 @@ public class ProjectionUpdateService {
         updateBurndown(event.sprintId());
     }
 
-    /** LLD S7 backfill/repair: recomputes CFD + active-sprint burndown for a project from current state. Used by ProjectionRebuildJobHandler (LLD S10), not on the request path. */
+    /** LLD S7 backfill/repair: recomputes CFD + active-sprint burndown for a project from current state. Used by ProjectionRebuildJobHandler (LLD S10), not on the request path -- this IS a full rescan, deliberately, since its entire purpose is correcting drift the incremental path may have accumulated. */
     @Transactional
-    public void rebuildForProject(java.util.UUID projectId) {
-        updateCfd(projectId);
+    public void rebuildForProject(UUID projectId) {
+        rescanCfd(projectId);
         sprintRepository.findByProjectIdAndStatus(projectId, SprintStatus.ACTIVE)
                 .forEach(sprint -> updateBurndown(sprint.getId()));
     }
 
-    private void updateBurndown(java.util.UUID sprintId) {
+    private void updateBurndown(UUID sprintId) {
         Sprint sprint = sprintRepository.findById(sprintId).orElse(null);
         if (sprint == null || sprint.getStatus() != SprintStatus.ACTIVE) {
             return; // PRD FR-34: burndown only tracked for the active sprint
@@ -105,7 +110,24 @@ public class ProjectionUpdateService {
                         () -> burndownSnapshotRepository.save(new BurndownSnapshot(sprintId, today, remainingPoints, remaining.size())));
     }
 
-    private void updateCfd(java.util.UUID projectId) {
+    /** Incremental: adjusts today's count for one status on every one of the project's boards, seeding from the prior day's count if today has no row yet. */
+    private void adjustCfd(UUID projectId, String statusName, int delta) {
+        LocalDate today = LocalDate.now();
+        for (Board board : boardRepository.findByProjectId(projectId)) {
+            CfdSnapshot snapshot = cfdSnapshotRepository.findByBoardIdAndSnapshotDateAndStatusName(board.getId(), today, statusName)
+                    .orElseGet(() -> {
+                        int carriedForward = cfdSnapshotRepository
+                                .findFirstByBoardIdAndStatusNameAndSnapshotDateLessThanOrderBySnapshotDateDesc(board.getId(), statusName, today)
+                                .map(CfdSnapshot::getIssueCount)
+                                .orElse(0);
+                        return cfdSnapshotRepository.save(new CfdSnapshot(board.getId(), today, statusName, carriedForward));
+                    });
+            snapshot.update(Math.max(0, snapshot.getIssueCount() + delta));
+        }
+    }
+
+    /** Full rescan, used only by rebuildForProject -- the deliberate exception to the incremental-by-default rule above. */
+    private void rescanCfd(UUID projectId) {
         List<Issue> allIssues = issueService.listByProject(projectId);
         Map<String, Long> countsByStatus = allIssues.stream()
                 .collect(Collectors.groupingBy(Issue::getStatus, Collectors.counting()));

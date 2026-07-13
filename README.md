@@ -18,27 +18,32 @@ design chain (PRD → HLD → LLD → Database Design → API Design → UI Desi
 - **Governance & RBAC** — admin project/membership management, project-scoped permission
   resolution (`PermissionResolver` + `AuthorizationAspect`), synchronous audit logging.
 - **Backlog & Issues** — full issue CRUD across all five types, optimistic locking,
-  backlog reorder, comments, issue links, labels, attachment metadata (upload backend
-  stubbed — no real object storage provisioned).
+  backlog reorder, comments, issue links, labels, attachments via a local-disk object
+  storage stand-in (`LocalObjectStorageController`, path-traversal-safe; swap for real
+  S3 by replacing that one class + `AttachmentService.generateUploadUrl`).
 - **Sprint & Board** — sprint lifecycle state machine, per-project workflow engine,
-  Scrum/Kanban boards over the shared backlog, Kanban WIP-limit enforcement.
-- **Reporting** — burndown/velocity/CFD/sprint-summary projections, event-driven
-  (recompute-on-event, not a true incremental delta — see `ProjectionUpdateService`
-  javadoc for the documented gap vs. the HLD's target design).
-- **Notifications** — transactional outbox, in-app delivery (real), email delivery
-  (stubbed — logs instead of sending, no SMTP provider provisioned).
-- **Real-time** — STOMP/WebSocket board and notification push, single-instance only
-  (no Redis-backed multi-instance registry; see `WebSocketConfig` javadoc).
+  Scrum/Kanban boards over the shared backlog, Kanban WIP-limit enforcement, a daily
+  scheduler that enqueues sprint-ending-soon reminders (`SprintReminderScheduler`).
+- **Reporting** — burndown/velocity/CFD/sprint-summary projections. CFD updates are a
+  true incremental delta per event (carry-forward-seeded, see `ProjectionUpdateService`);
+  burndown is a targeted per-sprint recompute, bounded by sprint size, not project size.
+- **Notifications** — transactional outbox, in-app delivery (real), email delivery via
+  real SMTP (`JavaMailSender`, gated by `nexus.mail.enabled` — logs instead of sending
+  when disabled/unconfigured, which is the default since no SMTP server is provisioned
+  in this environment). The `REMINDER` job type is scheduled end-to-end (Sprint & Board
+  enqueues, Notifications delivers).
+- **Real-time** — STOMP/WebSocket board and notification push, illegal Kanban/Scrum
+  drag-drop targets are blocked client-side using the fetched workflow graph before a
+  request is even sent (server-side validation remains the actual authority).
 
 **Known gaps / follow-up work**, each flagged in code comments at the relevant class:
-- No real object storage or email provider wired — both are stubbed.
-- Reporting projections recompute in full on each event rather than applying a true
-  incremental delta (correct, not yet the target-scale-sized implementation).
-- `REMINDER` background job type has a handler but nothing schedules one yet.
-- Real-time push doesn't survive running more than one app instance.
-- Drag-and-drop on the Kanban/Scrum board doesn't pre-validate against the workflow
-  graph client-side the way the Issue Detail panel's status dropdown does — an illegal
-  drop surfaces as a server-side error rather than being blocked before the request.
+- Real-time push doesn't survive running more than one app instance (no Redis-backed
+  subscription registry — see `WebSocketConfig` javadoc).
+- Issue-key generation (`{PROJECT}-{n}`) isn't race-safe under truly concurrent creates
+  on the same project across multiple app instances (see `IssueKeyGenerator`).
+- The local-disk storage stand-in has no per-issue authorization check on the storage
+  endpoint itself (relies on the storage key's random UUID component being unguessable,
+  the same posture a real pre-signed URL has — see `LocalObjectStorageController`).
 
 ## Running locally
 
@@ -58,6 +63,11 @@ The bootstrap admin env vars provision exactly one platform Admin on first start
 `BootstrapAdminRunner`) — the one deliberate exception to "no self-service," since an
 admin-governed system otherwise has no way to create its first admin. Omit them after
 first deploy.
+
+Optional env vars: `NEXUS_STORAGE_PATH` (local-disk attachment storage, default
+`./data/attachments`), `NEXUS_STORAGE_BASE_URL` (default `http://localhost:8080/api/v1`),
+`NEXUS_MAIL_ENABLED` + `NEXUS_SMTP_HOST`/`_PORT`/`_USERNAME`/`_PASSWORD` (real email
+delivery, off by default — logs instead of sending when unset).
 
 ### Frontend
 ```

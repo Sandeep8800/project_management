@@ -80,7 +80,9 @@ public class NotificationDispatchService {
         notifyAllProjectMembers(event.projectId(), "SPRINT_COMPLETED", Map.of("sprintId", event.sprintId().toString()));
     }
 
-    private void notifyAllProjectMembers(UUID projectId, String eventType, Map<String, Object> payload) {
+    /** Also called by ReminderJobHandler for the sprint-ending-soon reminder (LLD S10 job catalog) -- not just internal event listeners. */
+    @Transactional
+    public void notifyAllProjectMembers(UUID projectId, String eventType, Map<String, Object> payload) {
         projectMembershipService.listByProject(projectId)
                 .forEach(membership -> notify(membership.getUserId(), eventType, payload));
     }
