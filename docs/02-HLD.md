@@ -1,6 +1,6 @@
 # Nexus PMS — High-Level Design (HLD)
 
-**Status:** Draft for review
+**Status:** Approved
 **Phase:** 2 of 7 — Documentation-first sequence (PRD → **HLD** → LLD → Database Design → API Design → UI Design → Coding)
 **Input:** [`01-PRD.md`](./01-PRD.md) (Approved, 2026-07-13)
 **Owners:** Architecture
@@ -344,9 +344,6 @@ Deferred to later phases, not decided here:
 
 ## 18. Approval & Next Steps
 
-This HLD is **not final** until:
-1. The Availability/DR proposal in §12 is confirmed or amended by stakeholders.
-2. The NFR performance/operational targets proposed in §13 are confirmed or amended.
-3. This document is explicitly reviewed and approved.
+**This HLD is approved (2026-07-13).** The §12 Availability/DR proposal (primary+standby PostgreSQL, encrypted offsite backups, RPO ≤ 15 min / RTO ≤ 1 hour) and the §13 NFR performance/operational targets are accepted as proposed, with no amendments requested. Both remain **carried forward as inputs to Database Design** (they drive replication topology, indexing, and connection-pool sizing there) rather than re-litigated at this phase.
 
-Upon approval, the next phase is **Low-Level Design (LLD)**: module-internal class/service design, the sprint and issue status-transition state machines, the workflow-engine data model (§4), the permission-matrix data model, and event-flow detail for the notification/reporting/real-time/background-job consumers of the domain event bus described in §8. No implementation code will be written before LLD and subsequent Database Design, API Design, and UI Design phases are each reviewed in turn.
+The next phase is **Low-Level Design (LLD)**: module-internal class/service design, the sprint and issue status-transition state machines, the workflow-engine data model (§4), the permission-matrix data model, and event-flow detail for the notification/reporting/real-time/background-job consumers of the domain event bus described in §8. No implementation code will be written before LLD and subsequent Database Design, API Design, and UI Design phases are each reviewed in turn.
