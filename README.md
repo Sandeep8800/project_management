@@ -12,14 +12,33 @@ design chain (PRD → HLD → LLD → Database Design → API Design → UI Desi
 
 ## Implementation status
 
-**Fully implemented:** Identity & Access and Governance & RBAC (auth, JWT, project-scoped
-permission resolution, admin user/project/membership management, audit logging) — backend
-and frontend, end to end.
+**Fully implemented, backend and frontend, end to end:**
+- **Identity & Access** — local + SSO-assertion auth (auto-link-by-email), JWT
+  issuance/refresh rotation, admin user provisioning, per-user email-notification opt-in.
+- **Governance & RBAC** — admin project/membership management, project-scoped permission
+  resolution (`PermissionResolver` + `AuthorizationAspect`), synchronous audit logging.
+- **Backlog & Issues** — full issue CRUD across all five types, optimistic locking,
+  backlog reorder, comments, issue links, labels, attachment metadata (upload backend
+  stubbed — no real object storage provisioned).
+- **Sprint & Board** — sprint lifecycle state machine, per-project workflow engine,
+  Scrum/Kanban boards over the shared backlog, Kanban WIP-limit enforcement.
+- **Reporting** — burndown/velocity/CFD/sprint-summary projections, event-driven
+  (recompute-on-event, not a true incremental delta — see `ProjectionUpdateService`
+  javadoc for the documented gap vs. the HLD's target design).
+- **Notifications** — transactional outbox, in-app delivery (real), email delivery
+  (stubbed — logs instead of sending, no SMTP provider provisioned).
+- **Real-time** — STOMP/WebSocket board and notification push, single-instance only
+  (no Redis-backed multi-instance registry; see `WebSocketConfig` javadoc).
 
-**Scaffolded, not implemented:** Backlog & Issues, Sprint & Board (incl. Workflow Engine),
-Reporting, Notifications. Package structure and design docs exist (see each module's
-`package-info.java` under `backend/src/main/java/com/nexuspms/`); business logic is
-follow-up work.
+**Known gaps / follow-up work**, each flagged in code comments at the relevant class:
+- No real object storage or email provider wired — both are stubbed.
+- Reporting projections recompute in full on each event rather than applying a true
+  incremental delta (correct, not yet the target-scale-sized implementation).
+- `REMINDER` background job type has a handler but nothing schedules one yet.
+- Real-time push doesn't survive running more than one app instance.
+- Drag-and-drop on the Kanban/Scrum board doesn't pre-validate against the workflow
+  graph client-side the way the Issue Detail panel's status dropdown does — an illegal
+  drop surfaces as a server-side error rather than being blocked before the request.
 
 ## Running locally
 
